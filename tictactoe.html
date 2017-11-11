@@ -1,0 +1,443 @@
+<!-- win sound https://freesound.org/people/Mativve/sounds/391539/ -->
+<!DOCTYPE html>
+<html>
+<body>
+
+
+<script>
+types = {
+naught:0,
+Xos:1
+};
+gameStatusEnum =
+{
+finished:0,
+setting:1,
+live:2
+}
+gameStatus = gameStatusEnum.live;
+function Player(color,type,name)
+{
+this.name = name;
+this.color = color;
+this.type = type;
+this.session ={
+total:0,
+lastPos:{}
+}
+};
+player1 = new Player("yellow",types.naught,"first");
+player2 = new Player("black",types.Xos,"second");
+playersArray = [player1,player2];
+playersArray.index = 0;
+playersArray.total = 0;
+currentPlayer = player1;
+fieldData=[];
+var N=3
+var Max = N*N;
+var fieldSize =  600;
+var txtSize = 50;
+var canvasWidth = fieldSize;
+var canvasHeight = fieldSize +txtSize;
+var txtTop = canvasHeight-txtSize;
+var fontSize = 30;
+var canvas = createGameCanvas();
+var ctx = canvas.getContext("2d");
+init();
+
+function init()
+{
+initSetting();
+drawMenu();
+newGame();
+
+}
+function createGameCanvas()
+{
+var canvas = document.createElement('canvas');
+canvas.id     = "CursorLayer";
+canvas.width  = canvasWidth;
+canvas.height = canvasHeight;
+canvas.style.border = "5px solid gray"
+canvas.style.position ="relative";
+canvas.onclick = clicked;
+document.body.appendChild(canvas);
+return canvas;
+}
+function nextTurn()
+{
+playersArray.index = (playersArray.index +1) % 2;
+currentPlayer = playersArray[playersArray.index];
+}
+function clear()
+{
+ctx.clearRect(0, 0, fieldSize, fieldSize);
+}
+function initField()
+{
+field = [];
+for(var i=0;i<N;i++)
+{
+	field[i] = [];
+	for(var k=0;k<N;k++)
+	{
+		field[i][k] = -1;
+	}
+	
+}
+return field;
+}
+function newGame()
+{
+clear();
+setting(0);
+fieldData = initField();
+drawField();
+currentPlayer = player1;
+playersArray.index = 0;
+playersArray.total = 0;
+gameStatus = gameStatusEnum.live;
+Max = N*N;
+}
+function initSetting()
+{
+
+margin = 25;
+initX = fieldSize/2-100+canvas.offsetLeft;
+initY = fieldSize/2-100+canvas.offsetTop;
+function createInput(name,id,value)
+{
+var label =  document.createElement("Label");
+label.innerHTML = name;
+label.id = 'l'+id;
+label.style.position = 'absolute';
+label.style.left = initX.toString()+'px';
+label.style.top =  initY.toString()+'px';
+label.style.display = 'none';
+document.body.appendChild(label);
+
+initY += margin;
+
+var input = document.createElement('input');
+input.type = 'text';
+input.style.position = 'absolute';
+input.id = id;
+input.style.left = initX.toString()+'px';
+input.style.top =  initY.toString()+'px';
+input.value = value;
+input.style.display = 'none';
+document.body.appendChild(input);
+initY += margin;
+}
+
+createInput('Size','size',N);
+createInput('First player name','fpn',player1.name);
+createInput('Second player name','spn',player2.name);
+initY += margin;
+initX+=45;    
+var button = document.createElement("button");
+button.innerHTML ="Save";
+button.style.position = 'absolute';
+button.id = 'button';
+button.style.left = initX.toString()+'px';
+button.style.top =  initY.toString()+'px'	
+button.style.backgroundColor = '#4CAF50';
+button.style.border = 'none';
+button.style.color = 'white';
+button.style.fontSize ='16px';
+button.style.padding = '12px';
+button.style.display = 'none';
+button.addEventListener('click',function()
+{
+	var size = document.getElementById('size');
+	var name1= document.getElementById('fpn');
+	var name2=  document.getElementById('spn');
+	N = parseInt(size.value);
+	if (N<3)
+	{	
+		
+		N=3;
+		size.value = N;
+	}
+	player1.name = name1.value;
+	if (name1.value == "")
+	{
+		player1.name ="first";
+		name1.value = player1.name;
+	}
+	player2.name = name2.value;
+	if (name2.value == "")
+	{
+		player2.name ="second";
+		name2.value = player2.name;
+	}
+	setting(0);
+	newGame();
+});
+document.body.appendChild(button);
+
+	
+}
+function setting(close)
+{
+if (close == 0)
+{
+document.getElementById('lsize').style.display = 'none';
+document.getElementById('size').style.display = 'none';
+document.getElementById('lfpn').style.display = 'none';
+document.getElementById('fpn').style.display = 'none';
+document.getElementById('lspn').style.display = 'none';
+document.getElementById('spn').style.display = 'none';
+document.getElementById('button').style.display = 'none';
+return;
+}
+else if (close == 1)
+{		
+clear();
+if (gameStatus == gameStatusEnum.setting)
+	return;
+gameStatus = gameStatusEnum.setting;
+
+document.getElementById('lsize').style.display = 'block';
+document.getElementById('size').style.display = 'block';
+document.getElementById('lfpn').style.display = 'block';
+document.getElementById('fpn').style.display = 'block';
+document.getElementById('lspn').style.display = 'block';
+document.getElementById('spn').style.display = 'block';
+document.getElementById('button').style.display = 'block';
+}
+
+}
+function clicked(event)
+
+{
+var pageX = event.pageX - canvas.offsetLeft;
+var pageY = event.pageY - canvas.offsetTop;
+if (pageY >= txtTop )
+{
+	if (pageX < canvasWidth/2)
+	{
+		newGame();
+	}
+	else
+	{
+	 setting(1);
+	}
+}
+else
+{
+	if(gameStatus == gameStatusEnum.live)
+	{
+	var blockSize = fieldSize/N;
+	pos = {};
+	pos.x = Math.floor(pageX/blockSize);
+	pos.y = Math.floor(pageY/blockSize);
+	if (fieldData[pos.x][pos.y] == -1)
+	{	
+		playersArray.total +=1;
+		currentPlayer.session.total +=1;
+		currentPlayer.session.lastPos = pos;
+		fieldData[pos.x][pos.y] = currentPlayer.type;
+		drawElem(pos,currentPlayer.color,currentPlayer.type);
+		if (HasPlayerWon(currentPlayer))
+			{
+			playerWon(currentPlayer);
+			gameStatus = gameStatusEnum.finished;
+			}
+		else if (playersArray.total == Max)
+			{
+			tie();
+			gameStatus = gameStatusEnum.finished;
+			}
+		else
+			nextTurn();
+	}
+	}
+}
+}
+function HasPlayerWon(player)
+{
+var x = player.session.lastPos.x;
+var y = player.session.lastPos.y;
+	function VerCheck()
+	{
+		var count = 1;
+		for (var i=y+1;i<N;i++)
+		{	
+			console.log(x,i);
+			if (fieldData[x][i] == player.type)
+				count++;
+			else
+				break;
+		}
+		for (var i=y-1;i>=0;i--)
+		{
+			console.log(x,i);
+			if (fieldData[x][i] == player.type)
+					count++;
+			else
+				break;
+		}
+		if (count == N)
+			return true;
+		console.log(count);
+		return false;
+	}
+	function HorCheck()
+	{
+		var count = 1;
+		for (var i=x+1;i<N;i++)
+		{	
+			console.log(i,y);
+			if (fieldData[i][y] == player.type)
+				count++;
+			else
+				break;
+		}
+		for (var i=x-1;i>=0;i--)
+		{
+			console.log(i,y);
+			if (fieldData[i][y] == player.type)
+					count++;
+			else
+				break;
+		}
+		if (count == N)
+			return true;
+		console.log(count);
+		return false;
+	}
+	function DiagCheck()
+	{
+		var lx = x;
+		var ly = y;
+		var count = 1;
+		while(true)
+		{
+			lx++;
+			ly++;
+			if (lx<N && ly<N && fieldData[lx][ly] == player.type)
+				count++;
+			else 
+				break;
+		}
+		lx = x;
+		ly = y;
+		while(true)
+		{
+			lx--;
+			ly--;
+			if (lx>=0 && ly>=0 && fieldData[lx][ly] == player.type)
+				count++;
+			else 
+				break;
+		}
+		if (count == N)
+			return true;
+		lx = x;
+		ly = y;
+		count = 1;
+		while(true)
+		{
+			lx++;
+			ly--;
+			if (lx<N && ly>=0 && fieldData[lx][ly] == player.type)
+				count++;
+			else 
+				break;
+		}
+		lx = x;
+		ly = y;
+		while(true)
+		{
+			lx--;
+			ly++;
+			if (lx>=0 && ly<N && fieldData[lx][ly] == player.type)
+				count++;
+			else 
+				break;
+		}
+		if (count == N)
+			return true;
+		return false;
+	}
+
+return VerCheck() || HorCheck() || DiagCheck();
+}
+function playerWon(player)
+{
+var audio = new Audio('win.wav');
+audio.play();
+alert("Player " + player.name +" has won!!");
+}
+function tie()
+{
+alert("No one has won");
+}
+function drawMenu()
+{
+ctx.moveTo(0,txtTop);
+ctx.lineTo(canvasWidth,txtTop);
+ctx.stroke();
+ctx.fillStyle="green";
+ctx.fillRect(0,txtTop,canvasWidth/2,canvasHeight);
+ctx.fillStyle="yellow";
+ctx.fillRect(canvasWidth/2,txtTop,canvasWidth,canvasHeight);
+ctx.fillStyle ="black";
+ctx.font = fontSize.toString()+"px Arial";
+ctx.fillText("New Game",canvasWidth*0.25-75,canvasHeight-(txtSize-fontSize)/2);
+ctx.fillText("Setting",canvasWidth*0.75-50,canvasHeight-(txtSize-fontSize)/2);
+}
+function drawField()
+{
+ctx.beginPath();
+ctx.strokeStyle ="black";
+var blockSize = fieldSize/N;
+var next=blockSize;
+for (var i=0;i<N-1;i++)
+{
+ctx.moveTo(0,next);
+ctx.lineTo(fieldSize,next);
+ctx.moveTo(next,0);
+ctx.lineTo(next,fieldSize);
+
+next = next+blockSize;
+
+}
+ctx.stroke();
+}
+function drawElem(pos,color,type)
+{
+ctx.strokeStyle = color;
+var blockSize = fieldSize/N;
+var x;
+var y;
+if (types.naught == type)
+{
+ctx.beginPath();
+x = pos.x*blockSize + (blockSize/2);
+y = pos.y*blockSize +(blockSize/2);
+var r= blockSize/2-25;
+ctx.arc(x,y,r,0,2*Math.PI);
+ctx.stroke();
+return;
+}
+if (types.Xos == type)
+{
+ctx.beginPath();
+x = pos.x*blockSize + (blockSize/2);
+y = pos.y*blockSize +(blockSize/2);
+var size = blockSize/4;
+ctx.moveTo(x-size,y-size);
+ctx.lineTo(x+size,y+size);
+ctx.moveTo(x+size,y-size);
+ctx.lineTo(x-size,y+size);
+ctx.stroke();
+return;
+}
+
+}
+</script>
+
+</body>
+</html>
